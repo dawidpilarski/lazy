@@ -23,10 +23,9 @@ class lazy : private std::optional<T> {
 
   using std::optional<T>::optional;
 
-  constexpr explicit lazy(initializer_type initializer) noexcept(std::is_nothrow_move_constructible_v<initializer_type>)
-      : initializer_(std::move(initializer)) {
-    assert(initializer_);
-  }
+  constexpr explicit lazy(initializer_type initializer = {}) noexcept(std::is_nothrow_move_constructible_v<
+      initializer_type>)
+      : initializer_(std::move(initializer)) {}
 
   constexpr lazy(lazy &&rhs) noexcept(is_initializer_nothrow_constructible
       and std::is_nothrow_move_constructible_v<value_type>) :
@@ -48,6 +47,8 @@ class lazy : private std::optional<T> {
   constexpr T &&value() &&{
     return std::move(value());
   }
+
+  //
 
   constexpr T *operator->() {
     return &value();

@@ -7,3 +7,16 @@
 #include "catch2/catch.hpp"
 #include <lazy/lazy.hpp>
 
+TEST_CASE("no-op test"){
+  GIVEN("nothing"){
+
+  }
+  WHEN("do nothing")
+  {
+
+  }
+  THEN("nothing happens")
+  {
+
+  }
+}
