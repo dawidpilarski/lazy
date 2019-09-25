@@ -10,33 +10,57 @@
 #include <type_traits>
 #include <cassert>
 
-namespace lazy {
+namespace milli {
 
 template<typename T>
 class lazy : private std::optional<T> {
  public:
   using value_type = T;
   using initializer_type = std::function<value_type()>;
- private:
-  static constexpr bool is_initializer_nothrow_constructible = std::is_nothrow_move_constructible_v<initializer_type>;
- public:
 
   using std::optional<T>::optional;
+  using std::optional<T>::has_value;
+  using std::optional<T>::operator bool;
+  using std::optional<T>::emplace;
+  using std::optional<T>::swap;
+  using std::optional<T>::reset;
+  using std::optional<T>::operator=;
 
-  constexpr explicit lazy(initializer_type initializer = {}) noexcept(std::is_nothrow_move_constructible_v<
-      initializer_type>)
+  constexpr lazy() noexcept = default;
+  constexpr explicit lazy(initializer_type initializer) noexcept
       : initializer_(std::move(initializer)) {}
 
-  constexpr lazy(lazy &&rhs) noexcept(is_initializer_nothrow_constructible
-      and std::is_nothrow_move_constructible_v<value_type>) :
-      std::optional<T>(std::move(rhs.optional_value_)),
-      initializer_(std::move(rhs.initializer_)) {
-    rhs.optional_value_.reset();
+  constexpr lazy& operator=(const lazy&) = default;
+  constexpr lazy& operator=(lazy&&) noexcept(std::is_nothrow_move_constructible_v<value_type>) = default;
+  constexpr lazy& operator=(std::nullopt_t) noexcept(std::is_nothrow_destructible_v<value_type>) {
+    initializer_ = nullptr;
+    *this = std::nullopt;
   }
 
-  constexpr lazy(const lazy &rhs) = delete;
+  lazy& operator=(const std::optional<T>&){
 
-  constexpr T &value() &{
+  }
+
+  lazy& operator=(std::optional<T>&&){
+
+  }
+
+  template <typename U = T>
+  lazy& operator=(U&& value){
+
+  }
+
+  template <typename U>
+  lazy& operator=(const std::optional<U>&){
+
+  }
+
+  template <typename U>
+  lazy& operator=(std::optional<U>&&){
+
+  }
+
+  [[nodiscard]] constexpr T &value() &{
     if (not has_value() and initializer_) {
       initialize();
     }
@@ -44,32 +68,36 @@ class lazy : private std::optional<T> {
     return std::optional<T>::value();
   }
 
-  constexpr T &&value() &&{
+  [[nodiscard]] constexpr T &&value() &&{
     return std::move(value());
   }
 
-  //
-
-  constexpr T *operator->() {
+  [[nodiscard]] constexpr T *operator->() {
     return &value();
   }
 
-  constexpr T &operator*() &{
+  [[nodiscard]] constexpr T &operator*() &{
     return value();
   }
 
-  constexpr T &&operator*() &&{
+  [[nodiscard]] constexpr T &&operator*() &&{
     return std::move(value());
   }
 
-  using std::optional<T>::has_value;
-  using std::optional<T>::operator bool;
-  using std::optional<T>::emplace;
-  using std::optional<T>::swap;
-  using std::optional<T>::reset;
+  [[nodiscard]] bool has_initializer() const noexcept {
+    return initializer_;
+  }
 
   void initialize() {
     emplace(initializer_());
+  }
+
+  explicit operator std::optional<T> &() noexcept {
+    return *this;
+  }
+
+  explicit operator const std::optional<T> &() const noexcept {
+    return *this;
   }
 
  private:

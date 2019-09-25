@@ -6,4 +6,3 @@ conan_define_targets()
 
 add_executable(${PROJECT_NAME} test.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE lazy)
-target_include_directories(${PROJECT_NAME} PRIVATE ${CONAN_INCLUDE_DIRS_CATCH2})
