@@ -12,9 +12,9 @@ class LazyConan(ConanFile):
     description = "lazy type for lazy initialization"
     topics = ("C++17", "lazy-initialization", "header-only")
     no_copy_source = True
-    exports_sources="../*"
+    exports_sources="../src/*"
     # No settings/options are necessary, this is header only
     #
 
     def package(self):
-        self.copy("*.hpp", dst="include", src="src/")
+        self.copy("*.hpp", dst="include", src="./")
