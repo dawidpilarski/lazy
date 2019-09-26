@@ -13,55 +13,48 @@
 namespace milli {
 
 template<typename T>
-class lazy : private std::optional<T> {
+class lazy : public std::optional<T> {
  public:
   using value_type = T;
   using initializer_type = std::function<value_type()>;
 
-  using std::optional<T>::optional;
-  using std::optional<T>::has_value;
-  using std::optional<T>::operator bool;
-  using std::optional<T>::emplace;
-  using std::optional<T>::swap;
-  using std::optional<T>::reset;
-  using std::optional<T>::operator=;
+  //todo: why does special member inheriting does not work?
+//  using std::optional<T>::optional;
+//  using std::optional<T>::operator=;
 
   constexpr lazy() noexcept = default;
-  constexpr explicit lazy(initializer_type initializer) noexcept
-      : initializer_(std::move(initializer)) {}
+  constexpr lazy(const lazy&) = default;
+  constexpr lazy(lazy&&) = default;
+
+  constexpr explicit lazy(const initializer_type& initializer) noexcept : initializer_(initializer) {}
+  constexpr explicit lazy(initializer_type&& initializer) noexcept : initializer_(std::move(initializer)) {}
+
+  //todo remove if you are able to inherit them from std::optional
+  constexpr lazy(const std::optional<T>& optional) : std::optional<T>{optional}{}
+  constexpr lazy(std::optional<T>&& optional) : std::optional<T>{std::move(optional)}{}
+  template <typename U>
+  constexpr explicit lazy(U&& value) : std::optional<U>{std::forward<U>(value)}{}
+
+  template <typename Optional, typename Initializer, typename =
+      std::enable_if_t<std::is_same_v<Initializer, std::decay_t<initializer_type>>>>
+  constexpr lazy(Optional&& optional, Initializer&& initializer) : std::optional<T>{std::forward<Optional>(optional)}, initializer_{std::forward<Initializer>(initializer)}{}
 
   constexpr lazy& operator=(const lazy&) = default;
   constexpr lazy& operator=(lazy&&) noexcept(std::is_nothrow_move_constructible_v<value_type>) = default;
   constexpr lazy& operator=(std::nullopt_t) noexcept(std::is_nothrow_destructible_v<value_type>) {
     initializer_ = nullptr;
     *this = std::nullopt;
-  }
-
-  lazy& operator=(const std::optional<T>&){
-
-  }
-
-  lazy& operator=(std::optional<T>&&){
-
-  }
-
-  template <typename U = T>
-  lazy& operator=(U&& value){
-
+    return *this;
   }
 
   template <typename U>
-  lazy& operator=(const std::optional<U>&){
-
-  }
-
-  template <typename U>
-  lazy& operator=(std::optional<U>&&){
-
+  constexpr lazy& operator=(U&& rhs){
+    std::optional<T>::operator=(std::forward<U>(rhs));
+    return *this;
   }
 
   [[nodiscard]] constexpr T &value() &{
-    if (not has_value() and initializer_) {
+    if (not this->has_value() and initializer_) {
       initialize();
     }
 
@@ -84,20 +77,12 @@ class lazy : private std::optional<T> {
     return std::move(value());
   }
 
-  [[nodiscard]] bool has_initializer() const noexcept {
+  [[nodiscard]] constexpr bool has_initializer() const noexcept {
     return initializer_;
   }
 
-  void initialize() {
+  constexpr void initialize() {
     emplace(initializer_());
-  }
-
-  explicit operator std::optional<T> &() noexcept {
-    return *this;
-  }
-
-  explicit operator const std::optional<T> &() const noexcept {
-    return *this;
   }
 
  private:

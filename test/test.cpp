@@ -21,16 +21,21 @@ TEST_CASE("constructors type_traits"){
   auto void_lambda = []{};
   auto int_lambda = []() -> int {return 42;};
   REQUIRE_FALSE(std::is_constructible_v<lazy<Test>, decltype(void_lambda)>);
+  lazy<Test> test{void_lambda};
   REQUIRE(std::is_constructible_v<lazy<int>, decltype(int_lambda)>);
 
   REQUIRE(std::is_constructible_v<lazy<int>, std::optional<int>>);
   std::optional<int> optional;
   lazy<int> testedLazy = optional;
+
+  REQUIRE(std::is_constructible_v<lazy<int>, int>);
 }
 
 TEST_CASE("operator type_traits"){
   REQUIRE_FALSE(std::is_convertible_v<lazy<int>, std::optional<int>>);
   REQUIRE(std::is_convertible_v<lazy<int>, std::optional<int>&>);
+  lazy<int> integer;
+  static_cast<std::optional<int>&>(integer);
   REQUIRE_FALSE(std::is_convertible_v<const lazy<int>, const std::optional<int>&>);
   REQUIRE(std::is_convertible_v<const lazy<int>, const std::optional<int>&>);
 }
