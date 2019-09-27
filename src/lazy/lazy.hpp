@@ -29,15 +29,14 @@ class lazy : public std::optional<T> {
   constexpr explicit lazy(const initializer_type& initializer) noexcept : initializer_(initializer) {}
   constexpr explicit lazy(initializer_type&& initializer) noexcept : initializer_(std::move(initializer)) {}
 
-  //todo remove if you are able to inherit them from std::optional
   constexpr lazy(const std::optional<T>& optional) : std::optional<T>{optional}{}
   constexpr lazy(std::optional<T>&& optional) : std::optional<T>{std::move(optional)}{}
-  template <typename U>
-  constexpr explicit lazy(U&& value) : std::optional<U>{std::forward<U>(value)}{}
 
-  template <typename Optional, typename Initializer, typename =
-      std::enable_if_t<std::is_same_v<Initializer, std::decay_t<initializer_type>>>>
-  constexpr lazy(Optional&& optional, Initializer&& initializer) : std::optional<T>{std::forward<Optional>(optional)}, initializer_{std::forward<Initializer>(initializer)}{}
+  template <typename U, typename std::enable_if_t<std::is_constructible_v<std::optional<T>, U> && not std::is_constructible_v<initializer_type, U>>* = nullptr>
+  constexpr explicit lazy(U&& value) : std::optional<U>(std::forward<U>(value)){}
+
+  template <typename U, typename Initializer>
+  constexpr lazy(U&& value_initializer, Initializer&& initializer) : std::optional<T>{std::forward<U>(value_initializer)}, initializer_{std::forward<Initializer>(initializer)}{}
 
   constexpr lazy& operator=(const lazy&) = default;
   constexpr lazy& operator=(lazy&&) noexcept(std::is_nothrow_move_constructible_v<value_type>) = default;
