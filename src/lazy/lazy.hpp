@@ -22,37 +22,34 @@ class lazy : public std::optional<T> {
 //  using std::optional<T>::optional;
 //  using std::optional<T>::operator=;
 
-  constexpr lazy() noexcept = default;
-  constexpr lazy(const lazy&) = default;
-  constexpr lazy(lazy&&) = default;
+  lazy() noexcept = default;
+  lazy(const lazy&) = default;
+  lazy(lazy&&) = default;
+  lazy(std::nullopt_t) noexcept : lazy(){}
 
-  constexpr explicit lazy(const initializer_type& initializer) noexcept : initializer_(initializer) {}
-  constexpr explicit lazy(initializer_type&& initializer) noexcept : initializer_(std::move(initializer)) {}
 
-  constexpr lazy(const std::optional<T>& optional) : std::optional<T>{optional}{}
-  constexpr lazy(std::optional<T>&& optional) : std::optional<T>{std::move(optional)}{}
-
-  template <typename U, typename std::enable_if_t<std::is_constructible_v<std::optional<T>, U> && not std::is_constructible_v<initializer_type, U>>* = nullptr>
-  constexpr explicit lazy(U&& value) : std::optional<U>(std::forward<U>(value)){}
-
+  explicit lazy(const initializer_type& initializer) noexcept : initializer_(initializer) {}
+  explicit lazy(initializer_type&& initializer) noexcept : initializer_(std::move(initializer)) {}
+  template <typename U, typename = std::enable_if_t<std::is_constructible_v<std::optional<T>, U> && not std::is_constructible_v<initializer_type, U>>>
+  explicit lazy(U&& value) : std::optional<T>(std::forward<U>(value)){}
   template <typename U, typename Initializer>
-  constexpr lazy(U&& value_initializer, Initializer&& initializer) : std::optional<T>{std::forward<U>(value_initializer)}, initializer_{std::forward<Initializer>(initializer)}{}
+  lazy(U&& optional_initializer, Initializer&& initializer) : std::optional<T>{std::forward<U>(optional_initializer)}, initializer_{std::forward<Initializer>(initializer)}{}
 
-  constexpr lazy& operator=(const lazy&) = default;
-  constexpr lazy& operator=(lazy&&) noexcept(std::is_nothrow_move_constructible_v<value_type>) = default;
-  constexpr lazy& operator=(std::nullopt_t) noexcept(std::is_nothrow_destructible_v<value_type>) {
+  lazy& operator=(const lazy&) = default;
+  lazy& operator=(lazy&&) noexcept(std::is_nothrow_move_constructible_v<value_type>) = default;
+  lazy& operator=(std::nullopt_t) noexcept(std::is_nothrow_destructible_v<value_type>) {
     initializer_ = nullptr;
     *this = std::nullopt;
     return *this;
   }
 
-  template <typename U>
-  constexpr lazy& operator=(U&& rhs){
+  template <typename U, typename = std::enable_if_t<std::is_constructible_v<std::optional<T>, U> && not std::is_constructible_v<initializer_type, U>>>
+  lazy& operator=(U&& rhs){
     std::optional<T>::operator=(std::forward<U>(rhs));
     return *this;
   }
 
-  [[nodiscard]] constexpr T &value() &{
+  [[nodiscard]] T &value() &{
     if (not this->has_value() and initializer_) {
       initialize();
     }
@@ -60,27 +57,30 @@ class lazy : public std::optional<T> {
     return std::optional<T>::value();
   }
 
-  [[nodiscard]] constexpr T &&value() &&{
+  [[nodiscard]] T &&value() &&{
     return std::move(value());
   }
 
-  [[nodiscard]] constexpr T *operator->() {
+  [[nodiscard]] T *operator->() {
     return &value();
   }
 
-  [[nodiscard]] constexpr T &operator*() &{
+  [[nodiscard]] T &operator*() &{
     return value();
   }
 
-  [[nodiscard]] constexpr T &&operator*() &&{
+  [[nodiscard]] T &&operator*() &&{
     return std::move(value());
   }
 
-  [[nodiscard]] constexpr bool has_initializer() const noexcept {
-    return initializer_;
+  [[nodiscard]] bool has_initializer() const noexcept {
+    return static_cast<bool>(initializer_);
   }
 
-  constexpr void initialize() {
+  void set_initializer(const initializer_type& initializer) noexcept(std::is_nothrow_copy_assignable_v<initializer_type>) {initializer_ = initializer;}
+  void set_initializer(initializer_type&& initializer) noexcept (std::is_nothrow_move_assignable_v<initializer_type>) {initializer_ = std::move(initializer);}
+
+  void initialize() {
     emplace(initializer_());
   }
 
